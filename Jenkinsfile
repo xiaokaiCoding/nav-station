@@ -40,7 +40,10 @@ ENVEOF
                 sh '''
                     echo "等待服务启动..."
                     sleep 10
-                    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:80/api/categories || echo "000")
+                    # Jenkins 在容器内，需要通过 Docker bridge gateway 访问宿主机端口
+                    HOST_IP=$(ip route | grep default | awk '{print $3}')
+                    echo "Host IP: $HOST_IP"
+                    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "http://${HOST_IP}:80/api/categories" || echo "000")
                     if [ "$STATUS" = "200" ]; then
                         echo "✅ 健康检查通过"
                     else
