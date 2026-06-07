@@ -2,10 +2,6 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME     = 'nav-station'
-        SERVER_HOST  = '124.222.246.46'
-        SERVER_USER  = 'root'
-        CRED_ID      = 'ssh-key-credential'
         DEPLOY_PATH  = '/opt/nav-station'
     }
 
@@ -20,39 +16,36 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Deploy with Docker Compose') {
             steps {
-                sh '''
-                    docker build -t ${APP_NAME}-backend:latest ./backend
-                    docker build -t ${APP_NAME}-frontend:latest ./frontend
-                '''
-            }
-        }
+                sh """
+                    cp -f .env.example ${DEPLOY_PATH}/.env 2>/dev/null || true
 
-        stage('Deploy') {
-            steps {
-                sh '''
-                    # Copy files to server
-                    rsync -avz --exclude=node_modules --exclude=.next --exclude=.git \
-                        --exclude=Jenkinsfile --exclude=*.md \
-                        ./ ${SERVER_USER}@${SERVER_HOST}:${DEPLOY_PATH}/
+                    cd ${DEPLOY_PATH}
 
-                    # Restart services via docker-compose
-                    ssh ${SERVER_USER}@${SERVER_HOST} "
-                        cd ${DEPLOY_PATH}
-                        docker compose -f docker-compose.prod.yml up -d --build
-                        docker image prune -f
-                    "
-                '''
+                    # 停止旧容器
+                    docker compose -f docker-compose.prod.yml down || true
+
+                    # 构建并启动
+                    docker compose -f docker-compose.prod.yml up -d --build
+
+                    # 清理无用镜像
+                    docker image prune -f
+                """
             }
         }
 
         stage('Health Check') {
             steps {
                 sh '''
-                    sleep 5
-                    curl -sf http://${SERVER_HOST}/api/categories || (echo "Health check failed!" && exit 1)
-                    echo "Deploy successful!"
+                    sleep 8
+                    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:80/api/categories)
+                    if [ "$STATUS" = "200" ]; then
+                        echo "✅ 健康检查通过"
+                    else
+                        echo "❌ 健康检查失败, 状态码: $STATUS"
+                        exit 1
+                    fi
                 '''
             }
         }
@@ -60,10 +53,10 @@ pipeline {
 
     post {
         failure {
-            echo "部署失败，请检查日志"
+            echo "❌ 部署失败，请检查 Jenkins 构建日志"
         }
         success {
-            echo "部署成功"
+            echo "✅ 部署成功"
         }
     }
 }
