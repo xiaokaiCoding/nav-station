@@ -40,16 +40,15 @@ ENVEOF
                 sh '''
                     echo "等待服务启动..."
                     sleep 10
-                    # Jenkins 在容器内，需要通过 Docker bridge gateway 访问宿主机端口
-                    HOST_IP=$(ip route | grep default | awk '{print $3}')
-                    echo "Host IP: $HOST_IP"
-                    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "http://${HOST_IP}:80/api/categories" || echo "000")
-                    if [ "$STATUS" = "200" ]; then
+
+                    # 通过 docker exec 在 nginx 容器内发起请求
+                    RESULT=$(docker exec nav-nginx wget -qO- http://127.0.0.1/api/categories 2>&1) || true
+                    if echo "$RESULT" | grep -q '"code":0'; then
                         echo "✅ 健康检查通过"
                     else
-                        echo "❌ 健康检查失败, 状态码: $STATUS"
+                        echo "❌ 健康检查失败"
                         docker compose -f docker-compose.prod.yml ps
-                        docker compose -f docker-compose.prod.yml logs --tail=50
+                        docker compose -f docker-compose.prod.yml logs --tail=30
                         exit 1
                     fi
                 '''
