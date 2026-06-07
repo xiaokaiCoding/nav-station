@@ -1,4 +1,24 @@
+# Dependencies
 node_modules/
+package-lock.json
+
+# Build output
 .next/
-*.local
+dist/
+
+# Environment files
 .env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

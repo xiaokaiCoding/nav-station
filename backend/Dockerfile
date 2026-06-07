@@ -1,0 +1,8 @@
+FROM node:20-alpine AS base
+RUN apk add --no-cache dumb-init
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY src/ ./src/
+EXPOSE 4000
+CMD ["dumb-init", "node", "src/index.js"]
