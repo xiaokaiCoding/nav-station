@@ -43,10 +43,12 @@ JWT_SECRET=nav-station-secret-key-2024
 HTTP_PORT=80
 ENVEOF
 
-                    # 停止旧容器
-                    docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+                    # 强制停止并删除旧容器
+                    docker compose -f docker-compose.prod.yml down --remove-orphans --timeout 10 2>/dev/null || true
+                    # 如果有残留容器，强制删除
+                    docker rm -f nav-mysql nav-backend nav-frontend nav-nginx 2>/dev/null || true
 
-                    # 只构建发生变化的镜像（利用 Docker 层缓存）
+                    # 构建发生变化的镜像（利用 Docker 层缓存）
                     docker compose -f docker-compose.prod.yml build --parallel
 
                     # 启动所有服务
