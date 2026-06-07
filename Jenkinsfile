@@ -1,14 +1,34 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+
     triggers {
-        pollSCM('H/2 * * * *')
+        pollSCM('H/5 * * * *')
+    }
+
+    environment {
+        APP_NAME = 'nav-station'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/xiaokaiCoding/nav-station.git',
+                        credentialsId: '19af8209-b26b-4745-a27b-41ecf3e9e80f'
+                    ]],
+                    extensions: [
+                        [$class: 'CloneOption', timeout: 300, depth: 1, noTags: true],
+                        [$class: 'CheckoutOption', timeout: 120]
+                    ]
+                ])
             }
         }
 
@@ -23,13 +43,16 @@ JWT_SECRET=nav-station-secret-key-2024
 HTTP_PORT=80
 ENVEOF
 
-                    # 停止旧容器（忽略首次执行错误）
+                    # 停止旧容器
                     docker compose -f docker-compose.prod.yml down 2>/dev/null || true
 
-                    # 构建并启动
-                    docker compose -f docker-compose.prod.yml up -d --build
+                    # 只构建发生变化的镜像（利用 Docker 层缓存）
+                    docker compose -f docker-compose.prod.yml build --parallel
 
-                    # 清理无用镜像
+                    # 启动所有服务
+                    docker compose -f docker-compose.prod.yml up -d
+
+                    # 清理悬空镜像（保留缓存层）
                     docker image prune -f
                 '''
             }
@@ -38,17 +61,13 @@ ENVEOF
         stage('Health Check') {
             steps {
                 sh '''
-                    echo "等待服务启动..."
-                    sleep 10
-
-                    # 通过 docker exec 在 nginx 容器内发起请求
+                    sleep 8
                     RESULT=$(docker exec nav-nginx wget -qO- http://127.0.0.1/api/categories 2>&1) || true
                     if echo "$RESULT" | grep -q '"code":0'; then
                         echo "✅ 健康检查通过"
                     else
                         echo "❌ 健康检查失败"
                         docker compose -f docker-compose.prod.yml ps
-                        docker compose -f docker-compose.prod.yml logs --tail=30
                         exit 1
                     fi
                 '''
@@ -58,10 +77,10 @@ ENVEOF
 
     post {
         failure {
-            echo "❌ 部署失败，请检查 Jenkins 构建日志"
+            echo "❌ 部署失败"
         }
         success {
-            echo "✅ 部署成功，访问 http://124.222.246.46 查看导航站"
+            echo "✅ 部署成功"
         }
     }
 }
