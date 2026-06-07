@@ -6,17 +6,17 @@
 
 - **前端**: Next.js 14 + React + Tailwind CSS
 - **后端**: Node.js + Express
-- **数据库**: MySQL 8.0
+- **数据库**: MySQL 8.0（腾讯云服务器）
 
 ## 快速开始
 
-### 1. 启动 MySQL
+### 1. 建立 SSH 隧道（连接腾讯服务器 MySQL）
 
 ```bash
-docker-compose up -d
+ssh -i /Users/zyb/Downloads/2026_0606.pem -N -L 3306:localhost:3306 root@124.222.246.46
 ```
 
-或者手动启动 MySQL，然后执行 `backend/sql/init.sql` 初始化数据库。
+保持终端运行，不要关闭。
 
 ### 2. 启动后端
 
@@ -51,15 +51,13 @@ nav-station/
 ├── frontend/           # Next.js 前端
 │   ├── src/
 │   │   ├── app/        # 页面
-│   │   ├── components/ # 组件
-│   │   └── lib/        # 工具
+│   │   └── components/ # 组件
 │   └── ...
 ├── backend/            # Express 后端
 │   ├── src/
 │   │   ├── routes/     # API 路由
 │   │   ├── controllers/ # 业务逻辑
-│   │   ├── middleware/ # 中间件
 │   │   └── db.js       # 数据库连接
 │   └── sql/init.sql    # 数据库初始化
-└── docker-compose.yml  # MySQL 容器
+└── docker-compose.yml  # 本地开发可选 MySQL 配置（当前使用远程服务器）
 ```
