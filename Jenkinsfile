@@ -15,10 +15,13 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 sh '''
-                    # 确保 .env 文件存在
-                    if [ ! -f .env ]; then
-                        cp .env.example .env
-                    fi
+                    # 生成 .env 文件
+                    cat > .env << 'ENVEOF'
+DB_ROOT_PASSWORD=root
+DB_NAME=nav_station
+JWT_SECRET=nav-station-secret-key-2024
+HTTP_PORT=80
+ENVEOF
 
                     # 停止旧容器（忽略首次执行错误）
                     docker compose -f docker-compose.prod.yml down 2>/dev/null || true
