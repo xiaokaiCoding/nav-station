@@ -14,7 +14,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public 2>/dev/null || true
 COPY --from=builder /app/next.config.js ./
+RUN mkdir -p public
 EXPOSE 3000
 CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "3000"]
